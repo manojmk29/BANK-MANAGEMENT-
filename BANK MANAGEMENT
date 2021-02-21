@@ -1,0 +1,312 @@
+create table customer
+(
+acc_id int not null,
+name varchar2(20),
+age int,
+sex varchar2(20),
+city varchar2(20),
+primary key(acc_id,name));
+
+
+create table account
+(
+account_id int not null,
+balance number(20) not null,
+primary key(account_id));
+
+create table cheque
+(
+giver int not null,
+receiver int not null,
+cash int not null,
+primary key(giver,receiver));
+
+create table transaction
+(
+a_id int not null,
+choice varchar2(20),
+amount int not null,
+primary key(a_id));
+
+create table enquiry
+(
+ac_id int not null,
+Ebalance int,
+Ename varchar2(20),
+Eage int,
+Esex varchar2(20),
+ecity varchar2(20),
+type varchar2(20),
+status varchar2(20)); 
+
+
+
+____________________________________________________________________________________________________________________________________________________________________________
+
+				VALUES
+
+
+
+insert into customer values(183210,'ram',22,'m','cbe');
+insert into customer values(183211,'sam',11,'m','cbe');
+insert into customer values(183212,'lia',34,'f','cbe');
+insert into customer values(183213,'ann',36,'f','cbe');
+insert into customer values(183214,'max',25,'m','cbe');
+insert into customer values(183215,'leo',78,'m','cbe');
+insert into customer values(183216,'glenn',25,'m','cbe');
+insert into customer values(183217,'ben',56,'m','cbe');
+insert into customer values(183217,'hari',34,'m','tiruppur');
+insert into customer values(183219,'gokul',56,'m','madurai');
+insert into customer values(183220,'krishna',46,'m','chennai');
+
+insert into account values(183210,5000);
+insert into account values(183211,10000);
+insert into account values(183212,17000);
+insert into account values(183213,20000);
+insert into account values(183214,22222);
+insert into account values(183215,33333);
+insert into account values(183216,134333);
+insert into account values(183217,11111);
+insert into account values(183219,50984);
+insert into account values(183220,12345);
+
+insert into transaction values(183211,'d',4000);
+insert into transaction values(183212,'d',1000);
+insert into transaction values(183213,'d',2222);
+insert into transaction values(183214,'d',4444);
+insert into transaction values(183215,'w',333);
+insert into transaction values(183216,'w');
+insert into transaction values(183217,'d');
+insert into transaction values(183218,'t');
+insert into transaction values(183219,'t');
+insert into transaction values(183220,'w');
+
+insert into enquiry values(183210,55555,'ramar',23,'m','cbe','i',0);
+insert into enquiry values(183211,0,null,null,null,null,'d',0);
+insert into enquiry values(183212,0,'hari',null,null,null,'un',0);
+
+insert into enquiry values(183213,0,null,null,null,'chennai','uc',0);
+insert into enquiry values(183214,0,'manoj',99,null,null,'ua',0);
+
+insert into enquiry values(183211,0,null,null,null,null,'d',0);
+insert into enquiry values(183212,0,'manoj',null,null,null,'un',0);
+
+
+
+insert into cheque values(183211,183219,5000);
+__________________________________________________________________________________________________________________________________________________________________________________
+		
+
+				KEYS
+
+
+
+alter table customer add constraint f1 foreign key(acc_id) references account(account_id) ON DELETE CASCADE ;
+
+alter table cheque add constraints f2 foreign key(giver) references account(account_id);
+
+alter table cheque add constraints f3 foreign key(receiver) references account(account_id);
+
+alter table transaction add constraints f4 foreign key(a_id) references account(account_id);
+
+
+_______________________________________________________________________________________________________________________________________________________________________________
+
+________________________________________________________________________________________________________________________________________________________________________
+
+
+                                                                                   TRIGGER 1-STATEMENT TRIGGER
+
+
+
+set serveroutput on;
+create or replace trigger t1
+after insert or update on account
+declare
+cursor c1 is
+select account_id,balance from account;
+begin
+for i in c1 loop
+	if i.balance<1000 then
+	raise_application_error(-22222,'BALANCE CANNOT BE UNDER 1000');
+end if;
+end loop;
+end;
+/
+
+
+
+________________________________________________________________________________________________________________________________________________________________________
+
+
+                                                                                             TRIGGER 2-ROW TRIGGER
+
+
+
+set serveroutput on;
+create or replace trigger t2
+before insert or update on customer
+for each row
+declare
+begin
+	if :new.age<18 then
+	raise_application_error(-21212,'CUSTOMER SHOULD BE ABOVE 18 YEARS');
+end if;
+end;
+/
+
+________________________________________________________________________________________________________________________________________________________________________
+
+
+			BATCH PROCESSING
+
+
+DECLARE
+CURSOR C3 IS
+SELECT AC_ID,EBALANCE,ENAME,EAGE,ESEX,ecity,TYPE,status FROM ENQUIRY;
+BEGIN
+FOR I IN C3 LOOP
+	IF I.TYPE='i' THEN
+		ACCUS(I.AC_ID,I.EBALANCE,I.ENAME,I.EAGE,I.ESEX,i.ecity);
+	elsif i.type='un' then
+		update customer set name=i.ename where acc_id=i.ac_id;
+	elsif i.type='uc' then
+		update customer set city=i.ecity where acc_id=i.ac_id;
+	elsif i.type='ua' then
+		update customer set age=i.eage where acc_id=i.ac_id;
+	elsif i.type='d' then
+		delete from customer where acc_id=i.ac_id;
+	
+	end if;
+end loop;
+end;
+/
+
+_______________________________________________________________________________________________________________________________________________________________________
+                                                           
+          					VIEW
+
+CREATE VIEW VIEW1
+(CUS_NAME,CUS_BALANCE) AS
+SELECT NAME,BALANCE
+FROM CUSTOMER,ACCOUNT
+WHERE ACC_ID=ACCOUNT_ID;
+/
+
+_______________________________________________________________________________________________________________________________________________________________________
+
+					INSTEAD OF TRIGGER
+
+CREATE TRIGGER IOT2
+INSTEAD OF UPDATE ON VIEW1
+FOR EACH ROW
+BEGIN
+UPDATE ACCOUNT
+SET VIEW1.CUS_BALANCE=:NEW.CUS_BALANCE
+WHERE CUS_NAME=:OLD.CUS_NAME;
+END;
+/
+
+________________________________________________________________________________________________________________________________________________________________________
+
+					PROCEDURE
+
+
+CREATE OR REPLACE PROCEDURE DEPOSIT
+(L_ACC_ID ACCOUNT.ACCOUNT_ID%TYPE,
+L_AMOUNT TRANSACTION.AMOUNT%TYPE) AS
+BEGIN
+UPDATE ACCOUNT SET BALANCE=BALANCE+L_AMOUNT WHERE ACCOUNT_ID=L_ACC_ID;
+COMMIT;
+END DEPOSIT;
+/
+
+CREATE OR REPLACE PROCEDURE WITHDRAW
+(L_ACC_ID ACCOUNT.ACCOUNT_ID%TYPE,
+L_AMOUNT TRANSACTION.AMOUNT%TYPE) AS
+BEGIN
+UPDATE ACCOUNT SET BALANCE=BALANCE-L_AMOUNT WHERE ACCOUNT_ID=L_ACC_ID;
+COMMIT;
+END WITHDRAW;
+/
+
+
+CREATE OR REPLACE PROCEDURE TRANSFER
+(G_ACC_ID ACCOUNT.ACCOUNT_ID%TYPE,
+R_ACC_ID ACCOUNT.ACCOUNT_ID%TYPE,
+L_AMOUNT TRANSACTION.AMOUNT%TYPE) AS
+BEGIN
+UPDATE ACCOUNT SET BALANCE=BALANCE-L_AMOUNT WHERE ACCOUNT_ID=G_ACC_ID;
+UPDATE ACCOUNT SET BALANCE=BALANCE+L_AMOUNT WHERE ACCOUNT_ID=R_ACC_ID;
+COMMIT;
+END TRANSFER;
+/
+CREATE OR REPLACE PROCEDURE ACCUS
+(
+L_ACC_ID ACCOUNT.ACCOUNT_ID%TYPE,
+L_BALANCE ACCOUNT.BALANCE%TYPE,
+L_NAME CUSTOMER.NAME%TYPE,
+L_AGE CUSTOMER.AGE%TYPE,
+L_SEX CUSTOMER.SEX%TYPE,
+l_city customer.city%type) AS
+BEGIN
+INSERT INTO ACCOUNT VALUES(L_ACC_ID,L_BALANCE);
+INSERT INTO CUSTOMER VALUES(L_ACC_ID,L_NAME,L_AGE,L_SEX,l_city);
+COMMIT;
+END ACCUS;
+/
+
+
+
+
+_____________________________________________________________________________________________________________________________________________________________________________________
+
+
+                                                                                     PL/SQL PROGRAMS  
+
+                                                                    1.TO WITHDRAW AND DEPOSIT IN THE ACCOUNT
+
+
+
+
+declare
+	cursor c11 is
+	select a_id,choice,amount from transaction;
+begin
+for i in c11 loop
+	if i.choice='d' then
+	deposit(i.
+	elsif i.choice='w' then
+	update account set balance=account.balance-i.amount where account_id=i.a_id;
+end if;
+end loop;
+end;
+/
+
+                                                                   2.TO WITHDRAW FROM ONE ACCOUNT AND TRANSFERING TO OTHER ACCOUNT
+
+
+
+
+
+declare
+cursor c12 is
+select giver,receiver,cash from cheque;
+begin
+for i in c12 loop
+TRANSFER(i.giver,i.receiver,i.cash);
+end loop;
+end;
+/
+
+
+_____________________________________________________________________________________________________________________________________________________________________________
+
+
+			INDEX
+
+
+CREATE INDEX MK1
+ON ACCOUNT(ACCOUNT_ID);
+
+
